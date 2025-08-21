@@ -2892,3 +2892,5 @@ ggplot(data=filter(slope_out, metric == "SLA" ), aes(y=metric, x=Slope, fill=Tre
 SLA_density <- ggplot(data=traits_treat, aes(x=SLA_mean, group=species, fill=species)) +
   geom_density(adjust=1.5, alpha=.4) 
 SLA_density
+
+#commit testing
