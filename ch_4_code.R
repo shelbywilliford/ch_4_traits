@@ -135,7 +135,8 @@ ggplot(data=NExS_WholePlot_2023, aes(x=Species, y=Abundance_mean, fill=Species))
         axis.ticks.x=element_blank()) +
   theme(text = element_text(size = 25)) +
   theme(legend.text = element_text(size = 10)) +
-  theme(legend.position = 'bottom')
+  theme(legend.position = 'bottom') +
+  labs(title = '2023 Species Comp')
 
 NExS_WholePlot_2024 <- read_csv("NExS_SpComp_2024.csv") %>% 
   filter(Subplot == 'whole') %>%
@@ -161,7 +162,40 @@ ggplot(data=NExS_WholePlot_2024, aes(x=Species, y=Abundance_mean, fill=Species))
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank()) +
   theme(text = element_text(size = 25)) +
-  theme(legend.text = element_text(size = 25))
+  theme(legend.text = element_text(size = 10)) +
+  theme(legend.position = 'bottom') +
+  labs(title = '2024 Species Comp')
+
+NExS_WholePlot_2025 <- read_excel("NExS_SpComp_2025.xlsx") %>%
+  filter(Subplot == 'whole') %>%
+  select(!(Jan_Inside)) %>% 
+  select(!(March_Inside)) %>% 
+  select(!(Notes)) %>% 
+  mutate(March_Outside = as.numeric(March_Outside)) %>% 
+  pivot_longer(!Year:Species, names_to = "Season", values_to = "Abundance") %>% 
+  separate(Species,into=c("Sp", "Gn"), 
+           sep=" ", convert = TRUE) %>% 
+  filter(Sp == c('Aristida', 'Bothriochloa', 'Themeda', 'Panicum')) %>% 
+  unite("Species", Sp:Gn, remove = FALSE) %>% 
+  mutate( Abundance = (as.numeric(Abundance))) %>% 
+  filter(Abundance > 0) %>% 
+  group_by(Block, Species) %>% 
+  summarize((across(.cols=c(Abundance),
+                    .fns=list(mean=mean),
+                    na.rm=T))) %>% 
+  ungroup() 
+
+ggplot(data=NExS_WholePlot_2025, aes(x=Species, y=Abundance_mean, fill=Species)) +
+  geom_bar(stat="identity") +
+  ylim(0,100) +
+  facet_wrap(~Block) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  theme(text = element_text(size = 25)) +
+  theme(legend.text = element_text(size = 10)) +
+  theme(legend.position = 'bottom') +
+  labs(title = '2025 Species Comp')
 
 ### ANPP ###
 ANPP_raw <- read_csv("NExS_ANPP_2024_sw.csv")
@@ -2894,3 +2928,161 @@ SLA_density <- ggplot(data=traits_treat, aes(x=SLA_mean, group=species, fill=spe
 SLA_density
 
 #commit testing
+
+
+# CWT ---------------------------------------------------------------------
+
+non_dom_traits <- read_csv("NExS_Terry_ExternalTraits2025_missingDryWeights.csv")
+
+non_dom_pop_demo <- read_csv("NExS_Terry_ExternalPopDemo2025.csv")
+
+non_dom_full <- non_dom_traits %>% 
+  full_join(non_dom_pop_demo) %>% 
+  select(!year, block, plant_tag) 
+
+non_dom_species <- non_dom_full %>% 
+  select(!(block)) %>% 
+  select(!(plant_tag:rep_num)) %>% 
+  select(!(leaf_dry_weight_g:notes)) %>% 
+  group_by(species) %>% 
+  summarise(across(everything(), mean, na.rm=TRUE)) %>% 
+  mutate(veg_height = veg_height_cm) %>% 
+  mutate(flower_len = flower_length_cm) %>% 
+  mutate(leaf_thickness = leaf_thickness_mm) %>% 
+  mutate(leaf_wet_mass = leaf_wet_weight_g) %>% 
+  mutate(basal_area =basal1 * basal2 * 3.14) %>% 
+  mutate(arial_area = aerial1 * aerial2 * 3.14) %>% 
+  mutate(arial1 = aerial1) %>% 
+  mutate(arial2 = aerial2)
+
+species_traits <- x23_full_data_jan %>% 
+  group_by(species) %>% 
+  select(!(month)) %>% 
+  select(!(Block:"Install Date")) %>% 
+  select(!(year:plant_tag)) %>% 
+  select(!(height_t1:height_t3)) %>% 
+  summarise(across(everything(), mean, na.rm=TRUE)) %>% 
+  select(!(repro_height)) %>% 
+  select(!(vol_density)) %>% 
+  mutate(tiller_diameter = (diameter_t1 + diameter_t2 + diameter_t3/3)) %>% 
+  mutate(leaf_thickness = (thick_l1 + thick_l2 + thick_l3/3)) %>% 
+  mutate(leaf_dry_mass = (dry_mass_l1 + dry_mass_l2 + dry_mass_l3/3)) %>% 
+  mutate(leaf_wet_mass = (wet_mass_l1 + wet_mass_l2 + wet_mass_l3/3)) %>% 
+  select(!(diameter_t1:wet_mass_l3)) %>% 
+  mutate(basal_area =basal1 * basal2 * 3.14) %>% 
+  mutate(arial_area = arial1 * arial2 * 3.14)
+
+full_species_traits <- species_traits %>% 
+  full_join(non_dom_species) %>% 
+  select(!(veg_height_cm:aerial2))
+
+NExS_WholePlot_2025_full <- read_excel("NExS_SpComp_2025.xlsx") %>%
+  filter(Subplot == 'whole') %>%
+  select(!(Jan_Inside)) %>% 
+  select(!(March_Inside)) %>% 
+  select(!(Notes)) %>% 
+  mutate(March_Outside = as.numeric(March_Outside)) %>% 
+  pivot_longer(!Year:Species, names_to = "Season", values_to = "Abundance") %>% 
+  separate(Species,into=c("Sp", "Gn"), 
+           sep=" ", convert = TRUE) %>% 
+  unite("Species", Sp:Gn, remove = FALSE) %>% 
+  mutate( Abundance = (as.numeric(Abundance))) %>% 
+  filter(Abundance > 0) %>% 
+  group_by(Block, Species) %>% 
+  summarize((across(.cols=c(Abundance),
+                    .fns=list(mean=mean),
+                    na.rm=T))) %>% 
+  ungroup() 
+
+
+# ANPP & BNPP -------------------------------------------------------------
+ anpp <- read_excel("NExS_ANPP_2025.xlsx") %>% 
+  mutate(Total_herb = Grass + Forb) %>% 
+  select(!(Notes)) %>% 
+  full_join(plot_key) %>% 
+  unite(treatment, drought, grazing, Fire, remove = FALSE)
+
+anpp_avg <- anpp %>% 
+  group_by(block, plot, treatment, drought, grazing, Fire) %>% 
+  summarize((across(.cols=c(Grass, Forb, Woody, Pdead, Total_herb),
+                    .fns=list(sum=sum),
+                    na.rm=T))) %>% 
+  ungroup() %>% 
+  drop_na()
+  
+
+ggplot(data=anpp_avg, aes(x=treatment, y=Total_herb_sum, fill= treatment)) +
+  geom_boxplot() +
+  facet_grid(~Fire) +
+  theme_bw()
+
+stat_compare_means(method = "anova", label.y = 200, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG", size =5)  
+
+bnpp <- read_excel("NExS_BNPP_2025.xlsx") %>% 
+  full_join(plot_key) %>% 
+  unite(treatment, drought, grazing, Fire, remove = FALSE)
+
+bnpp_avg <- bnpp %>% 
+  group_by(block, plot, treatment, drought, grazing, Fire) %>% 
+  summarize((across(.cols=c(LiveRoot_DryMass, SOM_DryMass),
+                    .fns=list(mean=mean),
+                    na.rm=T))) %>% 
+  ungroup() %>% 
+  drop_na()
+
+ggplot(data=bnpp_avg, aes(x=treatment, y=LiveRoot_DryMass_mean, fill= treatment)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'Treatment') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG_AF", size =5)  
+
+ggplot(data=bnpp_avg, aes(x=drought, y=LiveRoot_DryMass_mean, fill= drought)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'drought') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND", size =5)  
+
+ggplot(data=bnpp_avg, aes(x=grazing, y=LiveRoot_DryMass_mean, fill= grazing)) +
+  geom_boxplot() +
+  #facet_grid(~Fire) +
+  theme_bw() +
+  labs(title = 'grazing') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "NG", size =5)  
+
+ggplot(data=bnpp_avg, aes(x=Fire, y=LiveRoot_DryMass_mean, fill= Fire)) +
+  geom_boxplot() +
+  #facet_grid(~Fire) +
+  theme_bw() +
+  labs(title = 'Fire') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "AF", size =5)  
+
+full_npp_avg <- anpp_avg %>% 
+  full_join(bnpp_avg)
+
+ggplot(data = full_npp_avg, aes(x = LiveRoot_DryMass_mean, y = Total_herb_sum, color = treatment, group = treatment)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  facet_grid(drought~grazing)
+  
+x23_full_species_traits <- read_csv("NExS_trait-data_ALL.csv") %>% 
+  mutate(total_area = as.numeric(total_area)) %>% 
+  mutate(dry_weight = as.numeric(dry_weight)) %>% 
+  mutate(wet_weight = as.numeric(wet_weight)) %>% 
+  mutate(SLA = total_area/dry_weight) %>% #SLA
+  mutate(LDMC = (dry_weight*1000)/wet_weight) %>% 
+  group_by(species_id) %>% 
+  summarize((across(.cols=c(SLA, LDMC),
+                    .fns=list(mean=mean, sefxn=sefxn),
+                    na.rm=T))) %>% 
+  ungroup()
