@@ -2996,7 +2996,9 @@ NExS_WholePlot_2025_full <- read_excel("NExS_SpComp_2025.xlsx") %>%
 
 
 # ANPP & BNPP -------------------------------------------------------------
- anpp <- read_excel("NExS_ANPP_2025.xlsx") %>% 
+
+#ANPP 
+anpp <- read_excel("NExS_ANPP_2025.xlsx") %>% 
   mutate(Total_herb = Grass + Forb) %>% 
   select(!(Notes)) %>% 
   full_join(plot_key) %>% 
@@ -3020,6 +3022,7 @@ stat_compare_means(method = "anova", label.y = 200, size = 5) +      # Add globa
   stat_compare_means(label = "p.signif", method = "t.test",
                      ref.group = "ND_NG", size =5)  
 
+#BNPP
 bnpp <- read_excel("NExS_BNPP_2025.xlsx") %>% 
   full_join(plot_key) %>% 
   unite(treatment, drought, grazing, Fire, remove = FALSE)
@@ -3085,4 +3088,335 @@ x23_full_species_traits <- read_csv("NExS_trait-data_ALL.csv") %>%
   summarize((across(.cols=c(SLA, LDMC),
                     .fns=list(mean=mean, sefxn=sefxn),
                     na.rm=T))) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(Species = dplyr::recode(species_id,
+                                   "ari_con" = "Aristida_congesta",
+                                   "bot_rad" = "Bothriochloa_radicans",
+                                   "cen_cil" = "Cenchrus_ciliare",
+                                   "com_car" = "Commicarpus_pilosus",
+                                 "ehh_rid" = "Ehritia_rigida",
+                                 "era_sup" = "Eragrostis_superba",
+                                 "eriosonum" = "Eriosema_sp.",
+                                 "uro_mos" = "Urochloa_mosambicensis",
+                                 "evo_nut" = "Evolvulous_alsinoide",
+                                 "hel_stu" = "Heliotropium_steudneri",
+                                 "her_gla" = "Hermannia_glanduligera",
+                                 "het_con" = "Heteropogon_contortus",
+                                 "ind_vic" = "Indigophera_vicioides",
+                                 "oci_mum" = "Omocarpum_tricocarpum",
+                                 "pan_col" = "Panicum_coloratum",
+                                 "pan_max" = "Panicum_maximum",
+                                 "pavonia" = "Pavonia_NA",
+                                 "purple_tube" = "Purple_tube",
+                                 "sch_pap" = "Schmidtia_pappophoroides",
+                                 "tep_pur" = "Tephrosia_purpurea",
+                                 "the_tri" = "Themeda_triandra"))
+
+x25_species_comp <- read_excel("NExS_SpComp_2025.xlsx") %>%
+  filter(Subplot == 'whole') %>%
+  select(!(Jan_Inside)) %>% 
+  select(!(March_Inside)) %>% 
+  select(!(Notes)) %>% 
+  mutate(March_Outside = as.numeric(March_Outside)) %>% 
+  pivot_longer(!Year:Species, names_to = "Season", values_to = "Abundance") %>% 
+  separate(Species,into=c("Sp", "Gn"), 
+           sep=" ", convert = TRUE) %>% 
+  unite("Species", Sp:Gn, remove = FALSE) %>% 
+  mutate( Abundance = (as.numeric(Abundance))) %>% 
+  filter(Abundance > 0) %>% 
+  select(!(Season)) %>% 
+  group_by(Block, Plot, Species) %>% 
+  filter(Abundance == max(Abundance)) %>% 
+  ungroup() %>% 
+  distinct()
+
+CWT <- x25_species_comp %>% 
+  mutate(Percent = (Abundance/100)) %>% 
+  full_join(x23_full_species_traits) %>% 
+  drop_na() %>% 
+  mutate(SLA_CWT = (Percent * SLA_mean)) %>% 
+  mutate(LDMC_CWT = (Percent * LDMC_mean)) %>% 
+  group_by(Block, Plot) %>% 
+  dplyr::summarize((dplyr::across(.cols=c(SLA_CWT, LDMC_CWT, Percent),
+                                  .fns=list(sum=sum),
+                                  na.rm=T))) %>% 
+  ungroup() %>% 
+  mutate(block = Block) %>% 
+  mutate(plot = Plot)
+
+npp_cwt <- full_npp_avg %>% 
+  full_join(CWT) %>% 
+  mutate(Fire = as.factor(Fire)) %>% 
+  mutate(drought = as.factor(drought)) %>% 
+  mutate(grazing = as.factor(grazing)) %>% 
+  select(!(Block:Plot)) %>% 
+  mutate(plot_mod = dplyr::recode(plot,
+                                  '1' = '1' ,
+                                  '2' = '2',
+                                  '3' = '3' ,
+                                  '4' = '4',
+                                  '5' = '5', 
+                                  '6' = '6' , 
+                                  '7' = '7', 
+                                  '8' = '8' ,
+                                  '9' = '1',
+                                 '10' ='2', 
+                                 '11' = '3',
+                                 '12' = '4',
+                                 '13' = '5', 
+                                 '14' = '6',
+                                 '15' = '7',
+                                 '16' = '8',
+                                 '17' = '1' ,
+                                 '18' = '2' ,
+                                 '19' = '3' ,
+                                 '20' = '4',
+                                 '21' = '5' ,
+                                 '22' = '6' ,
+                                 '23' = '7' ,
+                                 '24' = '8' ,
+                                 '25'= '1' ,
+                                 '26' = '2' ,
+                                 '27' = '3' ,
+                                 '28'= '4',
+                                 '29' = '5' ,
+                                 '30'= '6' ,
+                                 '31'= '7' ,
+                                 '32' = '8' ,
+                                 '33' = '1' ,
+                                 '34' = '2' ,
+                                 '35' = '3' ,
+                                 '36' = '4',
+                                 '37' = '5' ,
+                                 '38' = '6' ,
+                                 '39' = '7' ,
+                                 '40' = '8' ,
+                                 '41' = '1' ,
+                                 '42' = '2' ,
+                                 '43' = '3' ,
+                                 '44' = '4' ,
+                                 '45' = '5' ,
+                                 '46' = '6' ,
+                                 '47' = '7' ,
+                                 '48' = '8' ))
+
+ggplot(data=npp_cwt, aes(x=Percent_sum, group=block, fill=block)) +
+  geom_density(adjust=1.5, alpha = 0.25) +
+  theme_bw()
+
+hist(npp_cwt$Percent_sum)
+
+ggplot(data = npp_cwt, aes(x = SLA_CWT_sum, y = Total_herb_sum)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: SLA x ANPP')
+
+ggplot(data = npp_cwt, aes(x = LDMC_CWT_sum, y = Total_herb_sum)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: LDMC x ANPP')
+
+ggplot(data = npp_cwt, aes(x = SLA_CWT_sum, y = LiveRoot_DryMass_mean)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: SLA x BNPP')
+
+
+ggplot(data = npp_cwt, aes(x = LDMC_CWT_sum, y = LiveRoot_DryMass_mean)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  labs(title = 'CWT: LDMC x BNPP')
+
+m_sla_anpp <- lm(Total_herb_sum ~ SLA_CWT_sum, data = npp_cwt)
+summary(m_sla_anpp)
+
+ggplot(data = npp_cwt, aes(x = SLA_CWT_sum, y = Total_herb_sum)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: SLA x ANPP')
+
+m_LDMC_anpp <- lm(Total_herb_sum ~ LDMC_CWT_sum, data = npp_cwt,)
+summary(m_LDMC_anpp)
+
+ggplot(data = npp_cwt, aes(x = LDMC_CWT_sum, y = Total_herb_sum, color = treatment, group = treatment)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: LDMC x ANPP')
+
+m_sla_bnpp <- lm(LiveRoot_DryMass_mean ~ SLA_CWT_sum, data = npp_cwt)
+summary(m_sla_bnpp)
+
+m_LDMC_bnpp <- lm(LiveRoot_DryMass_mean ~ LDMC_CWT_sum, data = npp_cwt)
+summary(m_LDMC_bnpp)
+
+m_LDMC_SLA <- lm(SLA_CWT_sum ~ LDMC_CWT_sum, data = npp_cwt)
+summary(m_LDMC_SLA)
+
+ggplot(data=npp_cwt, aes(x=treatment, y=SLA_CWT_sum, fill= treatment)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'Treatment') +
+  stat_compare_means(method = "anova", label.y = 100, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG_AF", size =10) 
+
+ggplot(data=npp_cwt, aes(x=drought, y=SLA_CWT_sum, fill= drought)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'drought') +
+  stat_compare_means(method = "anova", label.y = 100, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND", size =10) 
+
+ggplot(data=npp_cwt, aes(x=grazing, y=SLA_CWT_sum, fill= grazing)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'grazing') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "NG", size =5) 
+
+ggplot(data=npp_cwt, aes(x=Fire, y=SLA_CWT_sum, fill= Fire)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'fire') +
+  stat_compare_means(method = "anova", label.y = .8, size = 5) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "AF", size =5) 
+
+#Stats and graphs for presentation
+
+#anpp
+hist(log(npp_cwt$Total_herb_sum))
+shapiro.test(log(npp_cwt$Total_herb_sum))
+
+anpp_aov <- aov(log(Total_herb_sum) ~ drought * grazing, 
+               data = npp_cwt)
+print(anpp_aov)
+summary(anpp_aov)
+
+tukey.test <- TukeyHSD(anpp_aov)
+tukey.test
+
+anpp_mod <- lme(log(Total_herb_sum) ~ (Fire + drought + grazing)^2
+                         , data= npp_cwt
+                         , random = ~1 |block
+                         , correlation=corCompSymm(form = ~1 |block)
+                         , control=lmeControl(returnObject=TRUE)
+                         , na.action = na.omit)
+
+
+anova(anpp_mod, type="marginal")
+summary(anpp_mod)
+
+plot(anpp_mod, type=c("p","smooth"), col.line=1)
+qqnorm(anpp_mod, abline = c(0,1)) ## qqplot
+
+ggplot(data=npp_cwt, aes(x=Fire, y=log(Total_herb_sum), fill= Fire)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'ANPP x Fire') +
+  theme(text = element_text(size = 20)) +
+  theme(legend.text = element_text(size = 15)) +
+  theme(legend.title=element_text(size=15)) +
+  stat_compare_means(method = "anova", label.y = 2.5, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG_AF", size =10) 
+
+#bnpp
+hist((npp_cwt$LiveRoot_DryMass_mean))
+shapiro.test((npp_cwt$LiveRoot_DryMass_mean))
+
+bnpp_mod <- lme(LiveRoot_DryMass_mean ~ (Fire + drought + grazing)^2
+                , data= npp_cwt
+                , random = ~1 |block
+                , correlation=corCompSymm(form = ~1 |block)
+                , control=lmeControl(returnObject=TRUE)
+                , na.action = na.omit)
+
+
+anova(bnpp_mod, type="marginal")
+summary(bnpp_mod)
+
+plot(anpp_mod, type=c("p","smooth"), col.line=1)
+qqnorm(anpp_mod, abline = c(0,1)) ## qqplot
+
+ggplot(data=npp_cwt, aes(x=treatment, y=LiveRoot_DryMass_mean, fill= treatment)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'BNPP x Treatment') +
+  theme(text = element_text(size = 20)) +
+  theme(legend.text = element_text(size = 15)) +
+  theme(legend.title=element_text(size=15)) +
+  stat_compare_means(method = "anova", label.y = 0, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG_AF", size =10)
+
+#SLA
+hist((npp_cwt$SLA_CWT_sum))
+shapiro.test((npp_cwt$SLA_CWT_sum))
+
+sla_mod <- lme(SLA_CWT_sum ~ (Fire + drought + grazing)^2
+                , data= npp_cwt
+                , random = ~1 |block
+                , correlation=corCompSymm(form = ~1 |block)
+                , control=lmeControl(returnObject=TRUE)
+                , na.action = na.omit)
+
+
+anova(sla_mod, type="marginal")
+summary(sla_mod)
+
+plot(sla_mod, type=c("p","smooth"), col.line=1)
+qqnorm(sla_mod, abline = c(0,1)) ## qqplot
+
+hist((npp_cwt$LDMC_CWT_sum))
+shapiro.test((npp_cwt$LDMC_CWT_sum))
+
+ggplot(data=npp_cwt, aes(x=drought, y=SLA_CWT_sum, fill= drought)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'drought') +
+  theme(text = element_text(size = 20)) +
+  theme(legend.text = element_text(size = 15)) +
+  theme(legend.title=element_text(size=15)) +
+  stat_compare_means(method = "anova", label.y = 0, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND", size =10) 
+
+LDMC_mod <- lme(LDMC_CWT_sum ~ LiveRoot_DryMass_mean * treatment
+               , data= npp_cwt
+               , random = ~1 |block
+               , correlation=corCompSymm(form = ~1 |block)
+               , control=lmeControl(returnObject=TRUE)
+               , na.action = na.omit)
+
+
+anova(LDMC_mod, type="marginal")
+summary(LDMC_mod)
+
+plot(LDMC_mod, type=c("p","smooth"), col.line=1)
+qqnorm(LDMC_mod, abline = c(0,1)) ## qqplot
+
+ggplot(data=npp_cwt, aes(x=treatment, y=LDMC_CWT_sum, fill= treatment)) +
+  geom_boxplot() +
+  theme_bw() +
+  labs(title = 'Treatment') +
+  
+  theme(text = element_text(size = 20)) +
+  theme(legend.text = element_text(size = 15)) +
+  theme(legend.title=element_text(size=15)) +
+  stat_compare_means(method = "anova", label.y = 0, size = 10) +      # Add global p-value
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "ND_NG_AF", size =10) 
