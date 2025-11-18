@@ -2994,6 +2994,15 @@ NExS_WholePlot_2025_full <- read_excel("NExS_SpComp_2025.xlsx") %>%
                     na.rm=T))) %>% 
   ungroup() 
 
+ggplot(data = species_traits, aes(x = SLA, y = LDMC, color = species)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'SLA vs LDMC')
+
+doms_m <- lm(SLA ~ LDMC, data = species_traits)
+summary(doms_m)
 
 # ANPP & BNPP -------------------------------------------------------------
 
@@ -3112,6 +3121,13 @@ x23_full_species_traits <- read_csv("NExS_trait-data_ALL.csv") %>%
                                  "tep_pur" = "Tephrosia_purpurea",
                                  "the_tri" = "Themeda_triandra"))
 
+ggplot(data = x23_full_species_traits, aes(x = LDMC_mean, y = SLA_mean, group = species_id, color = species_id)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: LDMC x ANPP')
+
 x25_species_comp <- read_excel("NExS_SpComp_2025.xlsx") %>%
   filter(Subplot == 'whole') %>%
   select(!(Jan_Inside)) %>% 
@@ -3128,7 +3144,7 @@ x25_species_comp <- read_excel("NExS_SpComp_2025.xlsx") %>%
   group_by(Block, Plot, Species) %>% 
   filter(Abundance == max(Abundance)) %>% 
   ungroup() %>% 
-  distinct()
+  distinct() 
 
 CWT <- x25_species_comp %>% 
   mutate(Percent = (Abundance/100)) %>% 
@@ -3142,7 +3158,7 @@ CWT <- x25_species_comp %>%
                                   na.rm=T))) %>% 
   ungroup() %>% 
   mutate(block = Block) %>% 
-  mutate(plot = Plot)
+  mutate(plot = Plot) 
 
 npp_cwt <- full_npp_avg %>% 
   full_join(CWT) %>% 
@@ -3198,7 +3214,7 @@ npp_cwt <- full_npp_avg %>%
                                  '45' = '5' ,
                                  '46' = '6' ,
                                  '47' = '7' ,
-                                 '48' = '8' ))
+                                 '48' = '8' )) 
 
 ggplot(data=npp_cwt, aes(x=Percent_sum, group=block, fill=block)) +
   geom_density(adjust=1.5, alpha = 0.25) +
@@ -3367,6 +3383,8 @@ ggplot(data=npp_cwt, aes(x=treatment, y=LiveRoot_DryMass_mean, fill= treatment))
 hist((npp_cwt$SLA_CWT_sum))
 shapiro.test((npp_cwt$SLA_CWT_sum))
 
+
+
 sla_mod <- lme(SLA_CWT_sum ~ (Fire + drought + grazing)^2
                 , data= npp_cwt
                 , random = ~1 |block
@@ -3420,3 +3438,30 @@ ggplot(data=npp_cwt, aes(x=treatment, y=LDMC_CWT_sum, fill= treatment)) +
   stat_compare_means(method = "anova", label.y = 0, size = 10) +      # Add global p-value
   stat_compare_means(label = "p.signif", method = "t.test",
                      ref.group = "ND_NG_AF", size =10) 
+
+ggplot(data = npp_cwt, aes(x = SLA_CWT_sum, y = LDMC_CWT_sum)) +
+  geom_point() +
+  geom_smooth(method=lm,
+              se=FALSE) +
+  #facet_grid(drought~grazing) +
+  labs(title = 'CWT: SLA x LDMC')
+
+
+# Simper ------------------------------------------------------------------
+
+x25_sc_treatments <- x25_species_comp %>% 
+  full_join(NExS_plot_key) %>% 
+  unite(treatment, Drought, Grazing, Fire, remove = FALSE) %>% 
+  mutate(treatment = as.factor(treatment)) %>% 
+  pivot_wider(names_from = Species, values_from = Abundance)
+
+x25_sc <- x25_sc_treatments %>% 
+  subset(select = 18:81) %>% 
+  replace(is.na(.), 0) 
+
+x25_env <- x25_sc_treatments %>% 
+  subset(select= c(block, plot, treatment, Drought, Grazing, Fire))
+
+(sim <- with(x25_env, simper(x25_sc, Fire)))
+summary(sim)
+
